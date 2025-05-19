@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV Table Highlighter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    textarea, input {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 14px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    td {
+      border: 1px solid #333;
+      padding: 10px;
+      text-align: center;
+      width: 60px;
+    }
+    th {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border: 1px solid #333;
+    }
+    .highlight {
+      background-color: yellow;
+    }
+    h3 {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Enter CSV Data</h2>
+  <textarea id="csvInput" rows="10" placeholder="Paste raw CSV data here"></textarea>
+
+  <label>
+    Number to Highlight:
+    <input type="text" id="targetNumber" placeholder="e.g., 2415001" required>
+  </label>
+
+  <button onclick="processAndSearch()">Search and Display</button>
+
+  <div id="table-container"></div>
+
+  <script>
+    function parseExamCSV(csvString) {
+      const lines = csvString.trim().split(/\r?\n/);
+      const tables = [];
+      let currentTable = null;
+      let inTable = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Detect new table start
+        if (line.startsWith("Room No.")) {
+          // Save previous table if exists
+          if (currentTable) tables.push(currentTable);
+
+          const roomMatch = line.match(/Room No\.?\s*(\S+)/);
+          const room = roomMatch ? roomMatch[1] : "Unknown";
+
+          currentTable = {
+            room: room,
+            headers: [],
+            rows: []
+          };
+          inTable = true;
+          continue;
+        }
+
+        if (!inTable || !currentTable) continue;
+
+        if (line.startsWith("SECTION") || line.startsWith("GRAND TOTAL")) {
+          inTable = false;
+          continue;
+        }
+
+        if (line.startsWith("S.No")) {
+          currentTable.headers = line.split(",").map(h => h.trim());
+          continue;
+        }
+
+        if (!line || line.startsWith(",")) continue;
+
+        const row = line.split(",").map(cell => cell.trim());
+        currentTable.rows.push(row);
+      }
+
+      if (currentTable) {
+        tables.push(currentTable);
+      }
+
+      return tables;
+    }
+
+    function processAndSearch() {
+      const csvText = document.getElementById('csvInput').value.trim();
+      const target = document.getElementById('targetNumber').value.trim();
+      const container = document.getElementById('table-container');
+      container.innerHTML = '';
+
+      if (!csvText || !target) {
+        alert("Please enter both CSV data and a number to highlight.");
+        return;
+      }
+
+      const tables = parseExamCSV(csvText);
+      let matchFound = false;
+
+      tables.forEach(table => {
+        let shouldRender = false;
+
+        // Check if the target exists in this table
+        for (let row of table.rows) {
+          if (row.includes(target)) {
+            shouldRender = true;
+            break;
+          }
+        }
+
+        if (shouldRender) {
+          matchFound = true;
+          let html = `<h3>Room: ${table.room}</h3>`;
+          html += '<table><thead><tr>';
+
+          table.headers.forEach(header => {
+            html += `<th>${header}</th>`;
+          });
+
+          html += '</tr></thead><tbody>';
+
+          table.rows.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => {
+              const cleanCell = cell.trim();
+              const highlight = cleanCell === target ? 'highlight' : '';
+              html += `<td class="${highlight}">${cleanCell}</td>`;
+            });
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML += html;
+        }
+      });
+
+      if (!matchFound) {
+        container.innerHTML = `<p>No match found for <strong>${target}</strong>.</p>`;
+      }
+    }
+  </script>
+
+</body>
+</html>
