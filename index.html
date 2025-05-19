@@ -29,6 +29,27 @@
     h3 {
       margin-top: 30px;
     }
+    dialog {
+      border: none;
+      border-radius: 8px;
+      padding: 20px;
+      width: 90%;
+      max-width: 900px;
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    #modal-content table {
+      width: 100%;
+    }
+    #modal-content {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      text-align: center;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -47,7 +68,13 @@
 
   <button onclick="fetchAndSearch()">Fetch, Parse, Search</button>
 
-  <div id="table-container"></div>
+  <!-- Modal for table display -->
+  <dialog id="resultModal">
+    <div id="modal-content"></div>
+    <div class="modal-footer">
+      <button onclick="document.getElementById('resultModal').close()">Close</button>
+    </div>
+  </dialog>
 
   <script>
     function parseExamCSV(csvString) {
@@ -102,8 +129,9 @@
     async function fetchAndSearch() {
       const url = document.getElementById('csvUrl').value.trim();
       const target = document.getElementById('targetNumber').value.trim();
-      const container = document.getElementById('table-container');
-      container.innerHTML = '';
+      const modal = document.getElementById('resultModal');
+      const modalContent = document.getElementById('modal-content');
+      modalContent.innerHTML = '';
 
       if (!url || !target) {
         alert("Please enter both a GitHub URL and a number to highlight.");
@@ -115,20 +143,14 @@
         if (!response.ok) throw new Error("Failed to fetch CSV");
 
         let csvText = await response.text();
-	csvText = csvText.replace(/,,,,,,,/g, '');
+        csvText = csvText.replace(/,,,,,,,/g, ''); // Clean unwanted ,,,,,,, entries
+
         const tables = parseExamCSV(csvText);
 
         let matchFound = false;
 
         tables.forEach(table => {
-          let shouldRender = false;
-
-          for (let row of table.rows) {
-            if (row.includes(target)) {
-              shouldRender = true;
-              break;
-            }
-          }
+          let shouldRender = table.rows.some(row => row.includes(target));
 
           if (shouldRender) {
             matchFound = true;
@@ -151,16 +173,19 @@
             });
 
             html += '</tbody></table>';
-            container.innerHTML += html;
+            modalContent.innerHTML = html;
+            modal.showModal();
           }
         });
 
         if (!matchFound) {
-          container.innerHTML = `<p>No match found for <strong>${target}</strong>.</p>`;
+          modalContent.innerHTML = `<p>No match found for <strong>${target}</strong>.</p>`;
+          modal.showModal();
         }
       } catch (err) {
         console.error(err);
-        container.innerHTML = `<p style="color:red;">Error fetching CSV file. Please check the URL.</p>`;
+        modalContent.innerHTML = `<p style="color:red;">Error fetching CSV file. Please check the URL.</p>`;
+        modal.showModal();
       }
     }
   </script>
