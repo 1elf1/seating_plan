@@ -18,16 +18,10 @@
       border-collapse: collapse;
       margin-top: 20px;
     }
-    td {
+    td, th {
       border: 1px solid #333;
       padding: 10px;
       text-align: center;
-      width: 60px;
-    }
-    th {
-      background-color: #f0f0f0;
-      padding: 10px;
-      border: 1px solid #333;
     }
     .highlight {
       background-color: yellow;
@@ -39,15 +33,19 @@
 </head>
 <body>
 
-  <h2>Enter CSV Data</h2>
-  <textarea id="csvInput" rows="10" placeholder="Paste raw CSV data here"></textarea>
+  <h2>CSV Table Highlighter from GitHub</h2>
+
+  <label>
+    GitHub Raw CSV URL:
+    <input type="url" id="csvUrl" placeholder="https://raw.githubusercontent.com/user/repo/branch/file.csv">
+  </label>
 
   <label>
     Number to Highlight:
     <input type="text" id="targetNumber" placeholder="e.g., 2415001" required>
   </label>
 
-  <button onclick="processAndSearch()">Search and Display</button>
+  <button onclick="fetchAndSearch()">Fetch, Parse, Search</button>
 
   <div id="table-container"></div>
 
@@ -61,9 +59,7 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
 
-        // Detect new table start
         if (line.startsWith("Room No.")) {
-          // Save previous table if exists
           if (currentTable) tables.push(currentTable);
 
           const roomMatch = line.match(/Room No\.?\s*(\S+)/);
@@ -103,59 +99,68 @@
       return tables;
     }
 
-    function processAndSearch() {
-      const csvText = document.getElementById('csvInput').value.trim();
+    async function fetchAndSearch() {
+      const url = document.getElementById('csvUrl').value.trim();
       const target = document.getElementById('targetNumber').value.trim();
       const container = document.getElementById('table-container');
       container.innerHTML = '';
 
-      if (!csvText || !target) {
-        alert("Please enter both CSV data and a number to highlight.");
+      if (!url || !target) {
+        alert("Please enter both a GitHub URL and a number to highlight.");
         return;
       }
 
-      const tables = parseExamCSV(csvText);
-      let matchFound = false;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch CSV");
 
-      tables.forEach(table => {
-        let shouldRender = false;
+        let csvText = await response.text();
+	csvText = csvText.replace(/,,,,,,,/g, '');
+        const tables = parseExamCSV(csvText);
 
-        // Check if the target exists in this table
-        for (let row of table.rows) {
-          if (row.includes(target)) {
-            shouldRender = true;
-            break;
+        let matchFound = false;
+
+        tables.forEach(table => {
+          let shouldRender = false;
+
+          for (let row of table.rows) {
+            if (row.includes(target)) {
+              shouldRender = true;
+              break;
+            }
           }
-        }
 
-        if (shouldRender) {
-          matchFound = true;
-          let html = `<h3>Room: ${table.room}</h3>`;
-          html += '<table><thead><tr>';
+          if (shouldRender) {
+            matchFound = true;
+            let html = `<h3>Room: ${table.room}</h3>`;
+            html += '<table><thead><tr>';
 
-          table.headers.forEach(header => {
-            html += `<th>${header}</th>`;
-          });
-
-          html += '</tr></thead><tbody>';
-
-          table.rows.forEach(row => {
-            html += '<tr>';
-            row.forEach(cell => {
-              const cleanCell = cell.trim();
-              const highlight = cleanCell === target ? 'highlight' : '';
-              html += `<td class="${highlight}">${cleanCell}</td>`;
+            table.headers.forEach(header => {
+              html += `<th>${header}</th>`;
             });
-            html += '</tr>';
-          });
 
-          html += '</tbody></table>';
-          container.innerHTML += html;
+            html += '</tr></thead><tbody>';
+
+            table.rows.forEach(row => {
+              html += '<tr>';
+              row.forEach(cell => {
+                const highlight = cell.trim() === target ? 'highlight' : '';
+                html += `<td class="${highlight}">${cell}</td>`;
+              });
+              html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML += html;
+          }
+        });
+
+        if (!matchFound) {
+          container.innerHTML = `<p>No match found for <strong>${target}</strong>.</p>`;
         }
-      });
-
-      if (!matchFound) {
-        container.innerHTML = `<p>No match found for <strong>${target}</strong>.</p>`;
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p style="color:red;">Error fetching CSV file. Please check the URL.</p>`;
       }
     }
   </script>
