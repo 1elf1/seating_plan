@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CSV Table Highlighter</title>
 <style>
   :root {
     --bg-color: #1e1e2f;
@@ -142,19 +141,12 @@
 </head>
 <body>
 
-  <h2>CSV Table Highlighter from GitHub</h2>
-
   <label>
-    GitHub Raw CSV URL:
-    <input type="url" id="csvUrl" style="display: none;" value="https://raw.githubusercontent.com/1elf1/seating_plan/refs/heads/master/seating_plan.csv">
-  </label>
-
-  <label>
-    Number to Highlight:
+    Enter URN:
     <input type="text" id="targetNumber" placeholder="e.g., 2415001" required>
   </label>
 
-  <button onclick="fetchAndSearch()">Fetch, Parse, Search</button>
+  <button onclick="fetchAndSearch()">Search</button>
 
   <!-- Modal for table display -->
   <dialog id="resultModal">
@@ -215,7 +207,8 @@
     }
 
     async function fetchAndSearch() {
-      const url = document.getElementById('csvUrl').value.trim();
+      //const url = document.getElementById('csvUrl').value.trim();
+      const url = "https://raw.githubusercontent.com/1elf1/seating_plan/refs/heads/master/seating_plan.csv";
       const target = document.getElementById('targetNumber').value.trim();
       const modal = document.getElementById('resultModal');
       const modalContent = document.getElementById('modal-content');
