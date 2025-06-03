@@ -255,12 +255,17 @@
 
             table.rows.forEach(row => {
               html += '<tr>';
-              row.forEach(cell => {
-                const highlight = cell.trim() === target ? 'highlight' : '';
-                html += `<td class="${highlight}">${cell}</td>`;
+              row.forEach((cell, index) => {
+                const isFirstCol = index === 0;
+                const isTarget = cell.trim() === target;
+                const highlight = isTarget ? 'highlight' : '';
+                const displayValue = isFirstCol || isTarget ? cell : '';
+                html += `<td class="${highlight}">${displayValue}</td>`;
               });
               html += '</tr>';
             });
+
+
 
             html += '</tbody></table>';
             modalContent.innerHTML = html;
